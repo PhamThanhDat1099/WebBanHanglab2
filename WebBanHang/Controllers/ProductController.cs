@@ -21,16 +21,23 @@ namespace WebBanHang.Controllers
             _db = db;
             _hosting = hosting;
         }
-       
-        public IActionResult Index()
+        //trả về giao diện quản lí sản phẩm
+
+        public IActionResult Index(int page = 1)
         {
+            var pageSize = 5;
+            var currentPage = page;
+
+
             var productList = _db.Products.Include(x => x.Category).ToList();
-            return View(productList);
+            ViewBag.PageSum = Math.Ceiling((double)productList.Count / pageSize);
+            ViewBag.CurrentPage = currentPage;
+            return View(productList.Skip(currentPage - 1).Take(pageSize).ToList());
         }
-        
+
         public IActionResult Add()
         {
-           
+
             ViewBag.CategoryList = _db.Categories.Select(x => new SelectListItem
             {
                 Value = x.Id.ToString(),
@@ -38,18 +45,18 @@ namespace WebBanHang.Controllers
             });
             return View();
         }
-        
+
         [HttpPost]
         public IActionResult Add(Product product, IFormFile ImageUrl)
         {
-            if (ModelState.IsValid) 
+            if (ModelState.IsValid)
             {
                 if (ImageUrl != null)
                 {
-                    
+
                     product.ImageUrl = SaveImage(ImageUrl);
                 }
-               
+
                 _db.Products.Add(product);
                 _db.SaveChanges();
                 TempData["success"] = "Product inserted success";
@@ -62,7 +69,7 @@ namespace WebBanHang.Controllers
             });
             return View();
         }
-        
+
         public IActionResult Update(int id)
         {
             var product = _db.Products.Find(id);
@@ -70,7 +77,7 @@ namespace WebBanHang.Controllers
             {
                 return NotFound();
             }
-           
+
             ViewBag.CategoryList = _db.Categories.Select(x => new SelectListItem
             {
 
@@ -79,18 +86,18 @@ namespace WebBanHang.Controllers
             });
             return View(product);
         }
-        
+
         [HttpPost]
         public IActionResult Update(Product product, IFormFile ImageUrl)
         {
-            if (ModelState.IsValid) 
+            if (ModelState.IsValid)
             {
                 var existingProduct = _db.Products.Find(product.Id);
                 if (ImageUrl != null)
                 {
-                  
+
                     product.ImageUrl = SaveImage(ImageUrl);
-                   
+
                     if (!string.IsNullOrEmpty(existingProduct.ImageUrl))
                     {
                         var oldFilePath = Path.Combine(_hosting.WebRootPath, existingProduct.ImageUrl);
@@ -104,7 +111,7 @@ namespace WebBanHang.Controllers
                 {
                     product.ImageUrl = existingProduct.ImageUrl;
                 }
-             
+
                 existingProduct.Name = product.Name;
                 existingProduct.Description = product.Description;
                 existingProduct.Price = product.Price;
@@ -123,9 +130,9 @@ namespace WebBanHang.Controllers
         }
         private string SaveImage(IFormFile image)
         {
-            
+
             var filename = Guid.NewGuid().ToString() + Path.GetExtension(image.FileName);
-        
+
             var path = Path.Combine(_hosting.WebRootPath, @"images/products");
             var saveFile = Path.Combine(path, filename);
             using (var filestream = new FileStream(saveFile, FileMode.Create))
@@ -135,7 +142,7 @@ namespace WebBanHang.Controllers
             return @"images/products/" + filename;
         }
 
-        
+
         public IActionResult Delete(int id)
         {
             var product = _db.Products.Find(id);
@@ -145,7 +152,7 @@ namespace WebBanHang.Controllers
             }
             return View(product);
         }
-        
+
         [HttpPost, ActionName("Delete")]
         public IActionResult DeleteConfirmed(int id)
         {
@@ -154,7 +161,7 @@ namespace WebBanHang.Controllers
             {
                 return NotFound();
             }
-           
+
             if (!String.IsNullOrEmpty(product.ImageUrl))
             {
                 var oldFilePath = Path.Combine(_hosting.WebRootPath, product.ImageUrl);
@@ -163,7 +170,7 @@ namespace WebBanHang.Controllers
                     System.IO.File.Delete(oldFilePath);
                 }
             }
-            
+
             _db.Products.Remove(product);
             _db.SaveChanges();
             TempData["success"] = "Product deleted success";
